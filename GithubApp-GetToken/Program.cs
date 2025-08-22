@@ -6,9 +6,11 @@ using Microsoft.Identity.Web;
 
 var builder = WebApplication.CreateBuilder(args);
 
+
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddMicrosoftIdentityWebApi(builder.Configuration.GetSection("AzureAd"));
 builder.Services.AddAuthorization();
+
 builder.Services.AddDistributedMemoryCache();
 builder.Services.AddOpenApi();
 
@@ -44,16 +46,16 @@ app.MapGet("/jwt", (GithubUtils gh) =>
     return Results.Content(gh.GetJWTToken(), "text/plain");
 })
 .WithName("GetGithubAppJwt")
-.WithOpenApi();
-//.RequireAuthorization();
+.WithOpenApi()
+.RequireAuthorization();
 
 app.MapGet("/installations", async (GithubClient cli) =>
 {
     return Results.Ok(await cli.GetAppInstallationsAsync());
 })
 .WithName("GetGithubAppInstallations")
-.WithOpenApi();
-//.RequireAuthorization();
+.WithOpenApi()
+.RequireAuthorization();
 
 
 app.MapGet("/installations/{org}/token", static async (string org,
@@ -84,7 +86,7 @@ app.MapGet("/installations/{org}/token", static async (string org,
     return Results.Content(await ghcli.GetAccessTokenForInstallation(installationId), "text/plain");
 })
 .WithName("GetGithubInstallationToken")
-.WithOpenApi();
-//.RequireAuthorization();
+.WithOpenApi()
+.RequireAuthorization();
 
 app.Run();
