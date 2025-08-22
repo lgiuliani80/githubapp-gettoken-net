@@ -1,23 +1,24 @@
-@GithubApp_GetToken_HostAddress = http://localhost:5125
+@App_HostAddress = http://localhost:5125
+@GithubAppToken = xxxxx
 
-GET {{GithubApp_GetToken_HostAddress}}/jwt
+GET {{App_HostAddress}}/jwt
 Accept: text/plain
 
 ###
-GET {{GithubApp_GetToken_HostAddress}}/installations
+GET {{App_HostAddress}}/installations
 Accept: application/json
 
 ###
-GET {{GithubApp_GetToken_HostAddress}}/installations/giulianil-sso/token
+GET {{App_HostAddress}}/installations/giulianil-sso/token
 Accept: text/plain
 
 ###
-GET {{GithubApp_GetToken_HostAddress}}/openapi/v1.json
+GET {{App_HostAddress}}/openapi/v1.json
 Accept: application/json
 
 ###
 
 GET https://api.github.com/app/installations
-Authorization: Bearer eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJpYXQiOjE3NTU4ODY1MDgsImV4cCI6MTc1NTg4NzEwNywiaXNzIjoiSXYyM2N0UXQxY0tSZzc4WmxSc2MiLCJuYmYiOjE3NTU4ODY1MDh9.EzLRugXDDw4-FW0bbu5QXYyGpth31_QRSjIWAde85Vdy-2PLB5ESQ82ctaKZ7hd_2v4hPl0dh-as0BgfDbNr3IGKLWdXu3hQiTIQVz7aTSeFvZIX7P6C_zSZA2s8x84CG2H-7Np1290Mm5xQ2HddJSIKG5gl7QiSm3w_wXKlZjSntzaNnNW1BB9Yn4Zpeya_SoJESA5KqCIJ7UkxNPFHIVD8tBtCNPS3LLm5os1pgp8tBhm0ZAzOstzjqwdM62HqYSyZV0FhaeVqwYPJ7ePhMRLBxEN7j_-z6c1T-0hcRG-reK_xIIjQwdjT7Vf90GC8YV3DZzqoYA3DPvO1_DC8Bw
+Authorization: Bearer {{GithubAppToken}}
 Accept: application/vnd.github+json
 User-Agent: myapp
