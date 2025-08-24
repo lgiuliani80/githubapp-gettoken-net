@@ -1,6 +1,12 @@
 @App_HostAddress = http://localhost:5125
 @GithubAppToken = xxxxx
 
+GET {{App_HostAddress}}/version
+
+###
+GET {{App_HostAddress}}/healthz
+
+###
 GET {{App_HostAddress}}/jwt
 Accept: text/plain
 
@@ -16,8 +22,8 @@ Accept: text/plain
 GET {{App_HostAddress}}/openapi/v1.json
 Accept: application/json
 
-###
 
+###
 GET https://api.github.com/app/installations
 Authorization: Bearer {{GithubAppToken}}
 Accept: application/vnd.github+json

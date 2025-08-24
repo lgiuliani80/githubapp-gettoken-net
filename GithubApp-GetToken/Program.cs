@@ -2,16 +2,33 @@ using GithubApp_GetToken;
 using GithubApp_GetToken.Config;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.Extensions.Caching.Distributed;
+using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.Identity.Web;
+using System.Reflection;
+
+const int INSTALLATION_CACHE_DURATION_HOURS = 1;
 
 var builder = WebApplication.CreateBuilder(args);
 
+var authBuilder = builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme);
+    
+if (builder.Configuration["AzureAd:TenantId"] is not null)
+{ 
+    authBuilder.AddMicrosoftIdentityWebApi(builder.Configuration.GetSection("AzureAd"));
+}
+else if (builder.Configuration.GetSection("OpenId").GetChildren().Any())
+{
+    authBuilder.AddJwtBearer(opt => builder.Configuration.Bind("OpenId", opt));
+}
+else if (builder.Configuration.GetSection("JWT").GetChildren().Any())
+{
+    authBuilder.AddJwtBearer(opt => builder.Configuration.Bind("OpenId", opt));
+}
 
-builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
-    .AddMicrosoftIdentityWebApi(builder.Configuration.GetSection("AzureAd"));
 builder.Services.AddAuthorization();
+builder.Services.AddHealthChecks().AddCheck<ContactGithub>("ContactGithub");
 
-builder.Services.AddDistributedMemoryCache();
+builder.Services.AddDistributedMemoryCache(); // Can be replaced with a true distributed cache, like Redis
 builder.Services.AddOpenApi();
 
 builder.Services.Configure<Github>(builder.Configuration.GetSection("Github"));
@@ -21,10 +38,12 @@ builder.Services.AddGithubClient();
 
 var app = builder.Build();
 
-if (app.Environment.IsDevelopment())
+if (app.Environment.IsDevelopment() || app.Configuration.GetValue("MapOpenApi", false))
 {
     app.MapOpenApi();
 }
+
+var authenticated = app.Configuration.GetValue("RequireAuthentication", true);
 
 static async Task PopulateCache(IDistributedCache cache, GithubClient cli)
 {
@@ -34,12 +53,29 @@ static async Task PopulateCache(IDistributedCache cache, GithubClient cli)
     {
         await cache.SetStringAsync(item.Account.Login, item.Id.ToString(), new DistributedCacheEntryOptions 
         { 
-            AbsoluteExpirationRelativeToNow = TimeSpan.FromHours(1) 
+            AbsoluteExpirationRelativeToNow = TimeSpan.FromHours(INSTALLATION_CACHE_DURATION_HOURS) 
         });
     }
 }
 
 //app.UseHttpsRedirection();
+
+app.MapHealthChecks("/healthz");
+
+app.MapGet("/version", () =>
+{
+    return new
+    {
+        pn = Assembly.GetEntryAssembly()!.GetCustomAttribute<AssemblyProductAttribute>()?.Product,
+        Application = Assembly.GetEntryAssembly()!.GetName().Name,
+        Assembly.GetEntryAssembly()!.GetCustomAttribute<AssemblyFileVersionAttribute>()?.Version,
+        NETRuntime = Environment.Version.ToString(),
+        OperatingSystem = Environment.OSVersion.VersionString
+    };
+
+})
+.WithName("GetVersion")
+.WithOpenApi();
 
 app.MapGet("/jwt", (GithubUtils gh) =>
 {
@@ -47,7 +83,7 @@ app.MapGet("/jwt", (GithubUtils gh) =>
 })
 .WithName("GetGithubAppJwt")
 .WithOpenApi()
-.RequireAuthorization();
+.ConditionallyRequireAuthorization(authenticated);
 
 app.MapGet("/installations", async (GithubClient cli) =>
 {
@@ -55,8 +91,7 @@ app.MapGet("/installations", async (GithubClient cli) =>
 })
 .WithName("GetGithubAppInstallations")
 .WithOpenApi()
-.RequireAuthorization();
-
+.ConditionallyRequireAuthorization(authenticated);
 
 app.MapGet("/installations/{org}/token", static async (string org,
     ILogger<Program> logger, IDistributedCache installationCache, GithubClient ghcli) =>
@@ -87,6 +122,35 @@ app.MapGet("/installations/{org}/token", static async (string org,
 })
 .WithName("GetGithubInstallationToken")
 .WithOpenApi()
-.RequireAuthorization();
+.ConditionallyRequireAuthorization(authenticated);
 
 app.Run();
+
+class ContactGithub(GithubClient ghcli) : IHealthCheck
+{
+    public async Task<HealthCheckResult> CheckHealthAsync(HealthCheckContext context, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            await ghcli.PingGithub();
+            return HealthCheckResult.Healthy("Able to contact GitHub");
+        }
+        catch (Exception ex)
+        {
+            return HealthCheckResult.Unhealthy("Error contacting GitHub", ex);
+        }
+    }
+}
+
+public static class EndpointConventionBuilderBuilderExtension
+{
+    public static TBuilder ConditionallyRequireAuthorization<TBuilder>(this TBuilder builder, bool requireAuthorization) where TBuilder : IEndpointConventionBuilder
+    {
+        if (requireAuthorization)
+        {
+            builder.RequireAuthorization();
+        }
+
+        return builder;
+    }
+}

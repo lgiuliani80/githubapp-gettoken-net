@@ -1,13 +1,21 @@
 ﻿using GithubApp_GetToken.Model;
 using System.Net.Http.Headers;
+using System.Reflection;
 using System.Web;
 
 namespace GithubApp_GetToken;
 
 public class GithubClient(ILogger<GithubClient> logger, HttpClient htcli)
 {
-    internal const string CLIENT_NAME = "lg-net-github-client";
-    internal const string CLIENT_VERSION = "0.1";
+    internal static readonly string CLIENT_NAME = "lg-net-github-client";
+    internal static readonly string CLIENT_VERSION = 
+        Assembly.GetEntryAssembly()!.GetCustomAttribute<AssemblyFileVersionAttribute>()?.Version ?? "0.1";
+
+    public async Task PingGithub()
+    {
+        var response = await htcli.GetAsync("/app/installations?per_page=1");
+        response.EnsureSuccessStatusCode();
+    }
 
     public async Task<GithubAppInstallaton[]> GetAppInstallationsAsync()
     {
@@ -19,7 +27,8 @@ public class GithubClient(ILogger<GithubClient> logger, HttpClient htcli)
         var response = await htcli.PostAsJsonAsync($"/app/installations/{installationId}/access_tokens", new { });
         response.EnsureSuccessStatusCode();
 
-        return (await response.Content.ReadFromJsonAsync<InstallationTokenResponse>())?.Token ?? throw new Exception("Unable to retrieve token");
+        return (await response.Content.ReadFromJsonAsync<InstallationTokenResponse>())?.Token 
+            ?? throw new Exception("Unable to retrieve token");
     }
 }
 
