@@ -22,6 +22,7 @@ else if (builder.Configuration.GetSection("OpenId").GetChildren().Any())
 }
 else if (builder.Configuration.GetSection("JWT").GetChildren().Any())
 {
+    JwtBearerOptions opt = new();
     authBuilder.AddJwtBearer(opt => builder.Configuration.Bind("OpenId", opt));
 }
 
