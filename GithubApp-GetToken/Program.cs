@@ -17,7 +17,8 @@ IdentityModelEventSource.ShowPII = true;
 
 if (builder.Configuration["AzureAd:TenantId"] is not null)
 {
-    authBuilder.AddMicrosoftIdentityWebApi(builder.Configuration.GetSection("AzureAd"));
+    authBuilder.AddMicrosoftIdentityWebApi(builder.Configuration.GetSection("AzureAd"),
+        subscribeToJwtBearerMiddlewareDiagnosticsEvents: true);
 }
 else if (builder.Configuration.GetSection("OpenId").GetChildren().Any())
 {
@@ -25,7 +26,6 @@ else if (builder.Configuration.GetSection("OpenId").GetChildren().Any())
 }
 else if (builder.Configuration.GetSection("JWT").GetChildren().Any())
 {
-    JwtBearerOptions opt = new();
     authBuilder.AddJwtBearer(opt => builder.Configuration.Bind("JWT", opt));
 }
 
@@ -80,13 +80,6 @@ app.MapGet("/version", () =>
 })
 .WithName("GetVersion")
 .WithOpenApi();
-
-app.MapGet("/config", () =>
-{
-    JwtBearerOptions cfg = new();
-    builder.Configuration.GetSection("AzureAd").Bind(cfg);
-    return cfg;
-});
 
 app.MapGet("/jwt", (GithubUtils gh) =>
 {

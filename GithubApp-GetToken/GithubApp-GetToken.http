@@ -9,9 +9,6 @@ GET {{App_HostAddress}}/version
 GET {{App_HostAddress}}/healthz
 
 ###
-GET {{App_HostAddress}}/config
-
-###
 GET {{App_HostAddress}}/jwt
 Accept: text/plain
 Authorization: Bearer {{JwtToken}}
