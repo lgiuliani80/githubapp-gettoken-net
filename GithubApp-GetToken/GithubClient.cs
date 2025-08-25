@@ -46,7 +46,7 @@ public static class GithubClientExtensions
 {
     public static IServiceCollection AddGithubClient(this IServiceCollection services)
     {
-        services.AddSingleton<GithubAppBearerTokenHandler>();
+        services.AddTransient<GithubAppBearerTokenHandler>();
 
         services.AddHttpClient<GithubClient>(htcli =>
         {

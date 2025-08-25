@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.Identity.Web;
+using Microsoft.IdentityModel.Logging;
 using System.Reflection;
 
 const int INSTALLATION_CACHE_DURATION_HOURS = 1;
@@ -11,9 +12,11 @@ const int INSTALLATION_CACHE_DURATION_HOURS = 1;
 var builder = WebApplication.CreateBuilder(args);
 
 var authBuilder = builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme);
-    
+
+IdentityModelEventSource.ShowPII = true;
+
 if (builder.Configuration["AzureAd:TenantId"] is not null)
-{ 
+{
     authBuilder.AddMicrosoftIdentityWebApi(builder.Configuration.GetSection("AzureAd"));
 }
 else if (builder.Configuration.GetSection("OpenId").GetChildren().Any())
@@ -23,7 +26,7 @@ else if (builder.Configuration.GetSection("OpenId").GetChildren().Any())
 else if (builder.Configuration.GetSection("JWT").GetChildren().Any())
 {
     JwtBearerOptions opt = new();
-    authBuilder.AddJwtBearer(opt => builder.Configuration.Bind("OpenId", opt));
+    authBuilder.AddJwtBearer(opt => builder.Configuration.Bind("JWT", opt));
 }
 
 builder.Services.AddAuthorization();
@@ -67,8 +70,8 @@ app.MapGet("/version", () =>
 {
     return new
     {
-        pn = Assembly.GetEntryAssembly()!.GetCustomAttribute<AssemblyProductAttribute>()?.Product,
-        Application = Assembly.GetEntryAssembly()!.GetName().Name,
+        ProductName = Assembly.GetEntryAssembly()!.GetCustomAttribute<AssemblyProductAttribute>()?.Product,
+        AssemblyName = Assembly.GetEntryAssembly()!.GetName().Name,
         Assembly.GetEntryAssembly()!.GetCustomAttribute<AssemblyFileVersionAttribute>()?.Version,
         NETRuntime = Environment.Version.ToString(),
         OperatingSystem = Environment.OSVersion.VersionString
@@ -77,6 +80,13 @@ app.MapGet("/version", () =>
 })
 .WithName("GetVersion")
 .WithOpenApi();
+
+app.MapGet("/config", () =>
+{
+    JwtBearerOptions cfg = new();
+    builder.Configuration.GetSection("AzureAd").Bind(cfg);
+    return cfg;
+});
 
 app.MapGet("/jwt", (GithubUtils gh) =>
 {

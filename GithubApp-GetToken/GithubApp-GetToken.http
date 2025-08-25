@@ -1,5 +1,7 @@
-@App_HostAddress = http://localhost:5125
+//@App_HostAddress = http://localhost:5125
+@App_HostAddress = https://app-ghau-giulianilsso-itn.azurewebsites.net/
 @GithubAppToken = xxxxx
+@JwtToken = xxxx
 
 GET {{App_HostAddress}}/version
 
@@ -7,16 +9,22 @@ GET {{App_HostAddress}}/version
 GET {{App_HostAddress}}/healthz
 
 ###
+GET {{App_HostAddress}}/config
+
+###
 GET {{App_HostAddress}}/jwt
 Accept: text/plain
+Authorization: Bearer {{JwtToken}}
 
 ###
 GET {{App_HostAddress}}/installations
 Accept: application/json
+Authorization: Bearer {{JwtToken}}
 
 ###
 GET {{App_HostAddress}}/installations/giulianil-sso/token
 Accept: text/plain
+Authorization: Bearer {{JwtToken}}
 
 ###
 GET {{App_HostAddress}}/openapi/v1.json
