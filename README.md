@@ -43,64 +43,64 @@ All endpoints can be protected with authentication (JWT Bearer) which can be tog
 
 1. **Clone the repository**:
 
-```bash
-git clone [your-repo-url]
-cd [your-repo-name]
-```
+   ```bash
+   git clone [your-repo-url]
+   cd [your-repo-name]
+   ```
 
 2. **Create your azd environment**:
 
-```bash
-azd env new [your-environment-name]
-```
+   ```bash
+   azd env new [your-environment-name]
+   ```
 
-The environment name will be used to create resource names, so it should be unique within your Azure subscription.  
-The environment name will be used to name the Resource Group which will contain all the resources created by `azd` according to the pattern: `rg-GithubGetToken-<your-environment-name>`.
+   The environment name will be used to create resource names, so it should be unique within your Azure subscription.  
+   The environment name will be used to name the Resource Group which will contain all the resources created by `azd` according to the pattern: `rg-GithubGetToken-<your-environment-name>`.
 
 3. **Initialize the Azure Developer CLI environment**:
 
-```bash
-azd init
-```
+   ```bash
+   azd init
+   ```
 
-In this step, you may be prompted to select an Azure subscription and region.  
-If you've never used `azd` before, it may also prompt you to log in to your Azure account.
+   In this step, you may be prompted to select an Azure subscription and region.  
+   If you've never used `azd` before, it may also prompt you to log in to your Azure account.
 
-3. **Set required parameters**:
+4. **Set required parameters**:
 
-```bash
-# GitHub App configuration
-azd env set GITHUB_APP_CLIENT_ID "your-github-app-client-id"
-azd env set GITHUB_APP_NAME "your-github-app-name"  # The name of your GitHub App
-azd env set GITHUB_PRIVATE_KEY_FILE "/path/to/your-github-app-private-key.pem"
+   ```bash
+   # GitHub App configuration
+   azd env set GITHUB_APP_CLIENT_ID "your-github-app-client-id"
+   azd env set GITHUB_APP_NAME "your-github-app-name"  # The name of your GitHub App
+   azd env set GITHUB_PRIVATE_KEY_FILE "/path/to/your-github-app-private-key.pem"
+   
+   # Entra ID/authentication configuration
+   azd env set ENTRA_DOMAIN "your-domain.com"   # The domain    of your Entra ID tenant
+   
+   # Managed Identity names that will need access to the    GitHub App
+   azd env set RUNNER_MANAGED_IDENTITY_NAMES "mi-name-1,   mi-name-2,..."  # Comma-separated list of Managed    Identity names that will need access to the GitHub App.    Don't put spaces between names.
+   
+   ```
 
-# Entra ID/authentication configuration
-azd env set ENTRA_DOMAIN "your-domain.com"   # The domain of your Entra ID tenant
+   > *NOTE*: the following parameters are optional and have defaults. Refer to the [Token Server documentation](docs/token-server.md) for details: 
+   > `AZURE_APP_SERVICE_PLAN_SKU_NAME`, `REQUIRE_AUTHENTICATION`, `MAP_OPENAPI`
 
-# Managed Identity names that will need access to the GitHub App
-azd env set RUNNER_MANAGED_IDENTITY_NAMES "mi-name-1,mi-name-2,..."  # Comma-separated list of Managed Identity names that will need access to the GitHub App. Don't put spaces between names.
+5. **Deploy to Azure**:
 
-```
+   ```bash
+   azd up
+   ```
 
-> *NOTE*: the following parameters are optional and have defaults. Refer to the [Token Server documentation](docs/token-server.md) for details.  
-> `AZURE_APP_SERVICE_PLAN_SKU_NAME`, `REQUIRE_AUTHENTICATION`, `MAP_OPENAPI`
+   At completion, the CLI will output the URL of your deployed web app. Then run:
 
-4. **Deploy to Azure**:
+   ```bash
+   azd env get APP_REGISTRATION_APPLICATION_ID_URI
+   ```
 
-```bash
-azd up
-```
+   to get the *Resource URI_ to be used in the Managed Identity token requests.
 
-At completion, the CLI will output the URL of your deployed web app. Then run:
-
-```bash
-azd env get APP_REGISTRATION_APPLICATION_ID_URI
-```
-
-to get the _Resource URI_ to be used in the Managed Identity token requests.
-
-This command will create all the necessary resources in Azure, including a Resource Group, App Service Plan, Web App, Key Vault, and Entra ID Application. It will also configure the Web App to use a Managed Identity and set up access policies in Key Vault.  
-It will also create and App Registration in Entra ID tenant and configure the Web App authentication to use it.  
+   This command will create all the necessary resources in Azure, including a Resource Group, App Service Plan, Web App, Key Vault, and Entra ID Application. It will also configure the Web App to use a Managed Identity and set up access policies in Key Vault.  
+   It will also create and App Registration in Entra ID tenant and configure the Web App authentication to use it.  
 
 ### Updates after first deployment
 
