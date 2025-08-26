@@ -1,3 +1,4 @@
+extension microsoftGraphV1
 targetScope = 'subscription'
 
 @minLength(1)
@@ -17,6 +18,9 @@ param principalId string = ''
 
 @description('Principal type: User, Group, ServicePrincipal, ForeignGroup')
 param principalType string = 'User'
+
+@description('GitHub App Name')
+param githubAppName string = ''
 
 @description('GitHub App Client ID')
 param githubAppClientId string = ''
@@ -41,6 +45,13 @@ param requireAuthentication bool = true
 
 @description('Whether to map OpenAPI documentation')
 param mapOpenApi bool = false
+
+@description('Managed Identities names to assign GithubRunner role (comma separated)')
+param runnerManagedIdentityNames string = ''
+
+@description('Managed Identity oids to assign GithubRunner role (comma separated)')
+param runnerManagedIdentityIds string = ''
+
 
 var tags = {
   'azd-env-name': environmentName
@@ -78,8 +89,24 @@ module appModule 'modules/app.bicep' = {
   }
 }
 
+
+// App Registration, Enterprise Application, Role Assignment
+module githubAppRegistration 'modules/githubappregistration.bicep' = {
+  name: 'githubAppRegistration'
+  scope: rg
+  params: {
+    githubAppClientId: githubAppClientId
+    githubAppName: githubAppName
+    entraDomain: entraDomain
+    runnerManagedIdentityNames: runnerManagedIdentityNames
+    runnerManagedIdentityObjectIds: runnerManagedIdentityIds
+  }
+}
+
+
 // App outputs
 output WEB_URI string = appModule.outputs.webUri
 output AZURE_LOCATION string = location
 output AZURE_KEY_VAULT_NAME string = appModule.outputs.keyVaultName
 output AZURE_APP_SERVICE_NAME string = appModule.outputs.appServiceName
+output APP_REGISTRATION_APPLICATION_ID_URI string = githubAppRegistration.outputs.applicationIdUri

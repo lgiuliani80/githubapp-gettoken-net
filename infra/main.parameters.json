@@ -20,6 +20,9 @@
     "githubAppClientId": {
       "value": "${GITHUB_APP_CLIENT_ID=}"
     },
+    "githubAppName": {
+      "value": "${GITHUB_APP_NAME=}"
+    },
     "githubPrivateKeySecretName": {
       "value": "${GITHUB_PRIVATE_KEY_SECRET_NAME=github-private-key}"
     },
@@ -40,6 +43,12 @@
     },
     "mapOpenApi": {
       "value": "${MAP_OPENAPI=false}"
-    }
+    },
+    "runnerManagedIdentityNames": {
+      "value": "${RUNNER_MANAGED_IDENTITY_NAMES=}"
+    },
+    "runnerManagedIdentityIds": {
+      "value": "${RUNNER_MANAGED_IDENTITY_IDS=}"
+    }  
   }
 }

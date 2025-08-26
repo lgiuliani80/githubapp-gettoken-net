@@ -4,14 +4,36 @@ metadata:
 
 hooks:
   preprovision:
-    posix:
-      shell: sh
-      run: |
-        cp $GITHUB_PRIVATE_KEY_FILE .azure/$AZURE_ENV_NAME/github-private-key.pem
-    windows:
-      shell: pwsh
-      run: |
-        Copy-Item -Path $env:GITHUB_PRIVATE_KEY_FILE -Destination ".azure\$env:AZURE_ENV_NAME\github-private-key.pem"
+    shell: pwsh
+    run: |
+      # Copying the GitHub App private key to the .azure folder so that it can be uploaded to Key Vault
+      Copy-Item -Path $env:GITHUB_PRIVATE_KEY_FILE -Destination ".azure\$env:AZURE_ENV_NAME\github-private-key.pem"
+      
+      # Converting managed identity names to OIDs and storing them in the environment
+      $ids = @()
+      $Env:RUNNER_MANAGED_IDENTITY_NAMES -split ',' | ForEach-Object {
+        $managedIdentityId = az ad sp list --filter "displayname eq '$_'" --query "[].id" -o tsv
+        if (-not $managedIdentityId -or $LASTEXITCODE -ne 0) {
+            throw "Unable to find identity '$_' in Entra ID directory!"
+        }
+        $ids += $managedIdentityId
+      }
+      azd env set RUNNER_MANAGED_IDENTITY_IDS=$($ids -join ',') --environment $Env:AZURE_ENV_NAME
+
+      # Retrieve the Tenant Id from the Entra domain
+      if ($Env:ENTRA_DOMAIN) {
+        $tokenUri = New-Object Uri (Invoke-RestMethod -Uri "https://login.microsoftonline.com/$($Env:ENTRA_DOMAIN)/v2.0/.well-known/openid-configuration" | Select-Object -ExpandProperty 'token_endpoint')
+        $tenantId = $tokenUri.Segments[1].TrimEnd('/')
+        if (-not $tenantId -or $LASTEXITCODE -ne 0) {
+            throw "Unable to find tenant for domain '$Env:ENTRA_DOMAIN'!"
+        }
+        if ($Env:AZURE_TENANT_ID -and $Env:AZURE_TENANT_ID -ne $tenantId) {
+            throw "The provided domain '$Env:ENTRA_DOMAIN' does not belong to deployment tenant id $Env:AZURE_TENANT_ID !"
+        }
+      }
+
+      # Completed
+      Write-Host "Pre-provisioning steps completed." -ForegroundColor Green
 
 # Required services
 services:

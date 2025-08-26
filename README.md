@@ -5,6 +5,7 @@ A lightweight ASP.NET Core service that facilitates obtaining authentication tok
 ## Overview
 
 This service provides a simple REST API for:
+
 1. Generating JWT tokens for GitHub App authentication
 2. Retrieving GitHub App installation information
 3. Obtaining installation access tokens by organization name or installation ID
@@ -47,6 +48,7 @@ The application uses the standard ASP.NET Core configuration system. Configure t
 #### Private Key Formats
 
 The `PrivateKey` can be provided in several formats:
+
 - **PEM string**: Beginning with `-----BEGIN RSA PRIVATE KEY-----` (PKCS#1 or PKCS#8)
 - **Base64-encoded key**: Same as above, without header and footer, in a single line
 - **Certificate thumbprint**: A 40-character hex string referencing a certificate in the Windows Certificate Store or 
@@ -193,17 +195,17 @@ When deploying to Azure, set the following environment variables in the App Serv
      It can be a Key Vault reference using the usual `@Microsoft.KeyVault()` syntax.
 
 2. **Authentication** (if enabled)
-   
+
    - For _Entra ID__:
      - `AzureAd__TenantId`
      - `AzureAd__Domain`
      - `AzureAd__ClientId`
      - `AzureAd__TokenValidationParameters__ValidAudiences__0`, `AzureAd__TokenValidationParameters__ValidAudiences__1`, ...
-   
+
    - For _OpenID_:
      - `OpenId__Authority` or , `OpenId__MetadataAddress`
      - `OpenId__Audience`
-   
+
    - For _generic JWT__:
      - `JWT__TokenValidationParameters__IssuerSigningKeys`
      - `JWT__TokenValidationParameters__ValidIssuer`

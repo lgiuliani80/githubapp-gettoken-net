@@ -31,7 +31,8 @@ resource keyVault 'Microsoft.KeyVault/vaults@2022-07-01' = {
 }
 
 resource githubPrivateKeySecret 'Microsoft.KeyVault/vaults/secrets@2022-07-01' = {
-  name: '${keyVault.name}/${githubPrivateKeySecretName}'
+  parent: keyVault
+  name: githubPrivateKeySecretName
   properties: {
     value: githubPrivateKey
   }

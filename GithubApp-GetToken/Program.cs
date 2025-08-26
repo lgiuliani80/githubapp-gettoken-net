@@ -94,6 +94,14 @@ app.MapGet("/jwt", (GithubUtils gh) =>
 .WithOpenApi()
 .ConditionallyRequireAuthorization(authenticated);
 
+app.MapGet("/app", async (GithubClient cli) =>
+{
+    return Results.Ok(await cli.GetAppAsync());
+})
+.WithName("GetGithubAppInfo")
+.WithOpenApi()
+.ConditionallyRequireAuthorization(authenticated);
+
 app.MapGet("/installations", async (GithubClient cli) =>
 {
     return Results.Ok(await cli.GetAppInstallationsAsync());

@@ -14,6 +14,11 @@ Accept: text/plain
 Authorization: Bearer {{JwtToken}}
 
 ###
+GET {{App_HostAddress}}/app
+Accept: application/json
+Authorization: Bearer {{JwtToken}}
+
+###
 GET {{App_HostAddress}}/installations
 Accept: application/json
 Authorization: Bearer {{JwtToken}}
