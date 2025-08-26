@@ -17,6 +17,11 @@ public class GithubClient(ILogger<GithubClient> logger, HttpClient htcli)
         response.EnsureSuccessStatusCode();
     }
 
+    public async Task<AppResponse?> GetAppAsync()
+    {
+        return await htcli.GetFromJsonAsync<AppResponse>("/app");
+    }
+
     public async Task<GithubAppInstallaton[]> GetAppInstallationsAsync()
     {
         return await htcli.GetFromJsonAsync<GithubAppInstallaton[]>("/app/installations") ?? [];
@@ -46,7 +51,7 @@ public static class GithubClientExtensions
 {
     public static IServiceCollection AddGithubClient(this IServiceCollection services)
     {
-        services.AddSingleton<GithubAppBearerTokenHandler>();
+        services.AddTransient<GithubAppBearerTokenHandler>();
 
         services.AddHttpClient<GithubClient>(htcli =>
         {

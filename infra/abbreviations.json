@@ -1,0 +1,5 @@
+{
+  "keyVaultVaults": "kv",
+  "webServerFarms": "plan",
+  "webSitesAppService": "app"
+}

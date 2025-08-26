@@ -5,11 +5,14 @@ A lightweight ASP.NET Core service that facilitates obtaining authentication tok
 ## Overview
 
 This service provides a simple REST API for:
+
 1. Generating JWT tokens for GitHub App authentication
 2. Retrieving GitHub App installation information
 3. Obtaining installation access tokens by organization name or installation ID
 
 It uses an in-memory cache to store installation information, allowing for faster token retrieval with organization names.
+
+For in-depth details, refer to the [GitHub App Token Server Architecture and Deployment Guide](docs/token-server.md).
 
 ## API Endpoints
 
@@ -20,238 +23,124 @@ All endpoints can be protected with authentication (JWT Bearer) which can be tog
 | `/healthz` | GET | Health check endpoint | 200 OK if healthy |
 | `/version` | GET | Returns version information | JSON with version details |
 | `/jwt` | GET | Returns a JWT token for GitHub API authentication | Text/plain JWT token |
+| `/app` | GET | Retrieves information about the current Github App | JSON |
 | `/installations` | GET | Lists all GitHub App installations | JSON array of installations |
 | `/installations/{org}/token` | GET | Gets an access token for an installation by org name or ID | Text/plain access token |
 
-### Authentication
+## Easy Deployment on Azure with Azure Developer CLI (azd)
 
-The service supports three authentication methods:
+### Prerequisites
 
-1. **Entra ID** (Microsoft Identity Platform)
-2. **OpenID Connect**
-3. **Generic JWT**
+1. [Azure Developer CLI](https://learn.microsoft.com/azure/developer/azure-developer-cli/install-azd) installed
+2. [GitHub CLI](https://cli.github.com/) installed and authenticated. Run `az login` to authenticate to Azure.
+3. Powershell 7 installed on [Windows](https://learn.microsoft.com/en-us/powershell/scripting/install/installing-powershell-on-windows?view=powershell-7.5) or Linux [Linux](https://learn.microsoft.com/en-us/powershell/scripting/install/installing-powershell-core-on-linux?view=powershell-7.5) or MacOS [MacOS](https://learn.microsoft.com/en-us/powershell/scripting/install/installing-powershell-core-on-macos?view=powershell-7.5).
+4. An Azure subscription to deploy resources into.
+5. The executing user or service principal must have permissions Owner permissions on the subscription and must be Global Administrator or Application Administrator in the Entra ID tenant.
+6. GitHub App created with private key downloaded
+7. The list of Managed Identity names that will need access to the GitHub App, for example System Assigned identities of Azure VMs or App Services that will call this service or ARC server names.
 
-Authentication can be disabled by setting `"RequireAuthentication": false` in the configuration.
+### Deployment Steps
 
-## Configuration
+1. **Clone the repository**:
 
-The application uses the standard ASP.NET Core configuration system. Configure the following settings in `appsettings.json` or environment variables:
+   ```bash
+   git clone [your-repo-url]
+   cd [your-repo-name]
+   ```
 
-### GitHub App Configuration (`Github` section)
+2. **Create your azd environment**:
 
-| Parameter | Description | Format |
-|-----------|-------------|--------|
-| `ClientId` | The GitHub App Client ID/App ID | String value (e.g., "Iv23ctQt1cKRg78ZlRsc") |
-| `PrivateKey` | The private key used to sign JWT tokens | Can be provided in multiple formats (see below) |
+   ```bash
+   azd env new [your-environment-name]
+   ```
 
-#### Private Key Formats
+   The environment name will be used to create resource names, so it should be unique within your Azure subscription.  
+   The environment name will be used to name the Resource Group which will contain all the resources created by `azd` according to the pattern: `rg-GithubGetToken-<your-environment-name>`.
 
-The `PrivateKey` can be provided in several formats:
-- **PEM string**: Beginning with `-----BEGIN RSA PRIVATE KEY-----` (PKCS#1 or PKCS#8)
-- **Base64-encoded key**: Same as above, without header and footer, in a single line
-- **Certificate thumbprint**: A 40-character hex string referencing a certificate in the Windows Certificate Store or 
-  uploaded in the "Certificate" section of the App Service and listed (as thumbprint) in the `WEBSITE_LOAD_CERTIFICATES` environment variable.
-- **File path**: Path to a PEM or DER encoded private key file (PKCS#1 or PKCS#8)
+3. **Initialize the Azure Developer CLI environment**:
 
-### Authentication Configuration
+   ```bash
+   azd init
+   ```
 
-#### Entra ID (`AzureAd` section)
+   In this step, you may be prompted to select an Azure subscription and region.  
+   If you've never used `azd` before, it may also prompt you to log in to your Azure account.
 
-```json
-"AzureAd": {
-  "Instance": "https://login.microsoftonline.com/",
-  "Domain": "yourdomain.com",
-  "TenantId": "company-tenant-id",
-  "ClientId": "app-client-id",
-  "TokenValidationParameters": {
-    "ValidAudiences": [
-        "app-client-id",
-        ...
-    ]
-  }
-}
-```
+4. **Set required parameters**:
 
-#### OpenID Connect (`OpenId` section)
-
-Configure standard OIDC parameters in the `OpenId` section.
-
-#### JWT (`JWT` section)
-
-Configure JWT validation parameters in the `JWT` section.
-
-### Other Configuration
-
-| Parameter | Description | Default |
-|-----------|-------------|---------|
-| `RequireAuthentication` | Whether to require authentication for API endpoints | `true` |
-| `MapOpenApi` | Whether to expose the OpenAPI/Swagger documentation in `/openapi/v1.json` in non-development environments | `false` |
-
-## Deployment to Azure
-
-### Using Azure CLI
-
-The following commands will set up all the necessary resources in Azure to run this application securely.
-
-First, set up variables for your resource names:
-
-```bash
-# Set variables for resources
-RG_NAME="github-token-rg"
-LOCATION="italynorth"
-APP_NAME="github-token-app"
-KEYVAULT_NAME="github-token-kv"
-ENTRA_APP_ID="YOUR_ENTRA_APP_CLIENT_ID"  # From your Entra ID app registration
-ENTRA_TENANT_ID="YOUR_ENTRA_TENANT_ID"   # Your Entra ID tenant ID
-ENTRA_DOMAIN="YOUR_DOMAIN.COM"           # Your Entra ID domain
-GITHUB_APP_ID="YOUR_GITHUB_APP_ID"       # Your GitHub App ID
-SECRET_NAME="github-private-key"         # Name for your private key in Key Vault
-```
-
-#### 1. Create a Resource Group and deploy the Web App
-
-```bash
-# Create a resource group
-az group create --name $RG_NAME --location $LOCATION
-
-# Deploy the app using webapp up
-az webapp up --runtime "DOTNET:9.0" --sku B1 --name $APP_NAME --resource-group $RG_NAME --location $LOCATION
-```
-
-#### 2. Create a Key Vault with RBAC authorization model
-
-```bash
-# Create Key Vault with RBAC authorization model enabled
-az keyvault create --name $KEYVAULT_NAME --resource-group $RG_NAME --location $LOCATION --enable-rbac-authorization true
-
-# Get your user objectId
-USER_OBJECT_ID=$(az ad signed-in-user show --query id -o tsv)
-
-# Get the Key Vault resource ID
-KEYVAULT_ID=$(az keyvault show --name $KEYVAULT_NAME --resource-group $RG_NAME --query id -o tsv)
-
-# Assign yourself the "Key Vault Administrator" role
-az role assignment create --assignee $USER_OBJECT_ID --role "Key Vault Administrator" --scope $KEYVAULT_ID
-```
-
-#### 3. Store your GitHub Private Key as a secret in Key Vault
-
-```bash
-# Add the GitHub private key to Key Vault
-# First save your private key to a file named 'github-private-key.pem'
-az keyvault secret set --vault-name $KEYVAULT_NAME --name $SECRET_NAME --file github-private-key.pem
-```
-
-#### 4. Enable System Assigned Managed Identity for the Web App
-
-```bash
-# Enable system-assigned managed identity for the Web App
-az webapp identity assign --name $APP_NAME --resource-group $RG_NAME
-
-# Get the principalId of the managed identity
-PRINCIPAL_ID=$(az webapp identity show --name $APP_NAME --resource-group $RG_NAME --query principalId -o tsv)
-```
-
-#### 5. Grant the Managed Identity access to Key Vault secrets using RBAC
-
-```bash
-# Assign "Key Vault Secrets User" role to the web app's managed identity
-az role assignment create --assignee $PRINCIPAL_ID --role "Key Vault Secrets User" --scope $KEYVAULT_ID
-```
-
-#### 6. Configure the necessary environment variables
-
-```bash
-# Set the environment variables for the Web App
-az webapp config appsettings set --name $APP_NAME --resource-group $RG_NAME --settings \
-  "AzureAd__TenantId=$ENTRA_TENANT_ID" \
-  "AzureAd__ClientId=$ENTRA_APP_ID" \
-  "AzureAd__Domain=$ENTRA_DOMAIN" \
-  "AzureAd__TokenValidationParameters__ValidAudiences__0=$ENTRA_APP_ID" \
-  "RequireAuthentication=true" \
-  "Github__ClientId=$GITHUB_APP_ID" \
-  "Github__PrivateKey=@Microsoft.KeyVault(VaultName=$KEYVAULT_NAME;SecretName=$SECRET_NAME)"
-```
-
-That's it! Your GitHub App Token Server is now deployed to Azure with:
-
-- Azure Key Vault for secure storage of GitHub private key
-- System-assigned managed identity for secure access to Key Vault
-- Proper configuration for Entra ID authentication
-- GitHub App settings correctly configured
-
-You can verify your deployment is working by navigating to the `/version` endpoint of your app.
-
-### Environment Variables
-
-When deploying to Azure, set the following environment variables in the App Service configuration:
-
-1. **GitHub App Configuration**
-
-   - `Github__ClientId`: Your GitHub App ID
-   - `Github__PrivateKey`: Your GitHub App private key (preferably as a base64-encoded string). 
-     It can be a Key Vault reference using the usual `@Microsoft.KeyVault()` syntax.
-
-2. **Authentication** (if enabled)
+   ```bash
+   # GitHub App configuration
+   azd env set GITHUB_APP_CLIENT_ID "your-github-app-client-id"
+   azd env set GITHUB_APP_NAME "your-github-app-name"  # The name of your GitHub App
+   azd env set GITHUB_PRIVATE_KEY_FILE "/path/to/your-github-app-private-key.pem"
    
-   - For _Entra ID__:
-     - `AzureAd__TenantId`
-     - `AzureAd__Domain`
-     - `AzureAd__ClientId`
-     - `AzureAd__TokenValidationParameters__ValidAudiences__0`, `AzureAd__TokenValidationParameters__ValidAudiences__1`, ...
+   # Entra ID/authentication configuration
+   azd env set ENTRA_DOMAIN "your-domain.com"   # The domain    of your Entra ID tenant
    
-   - For _OpenID_:
-     - `OpenId__Authority` or , `OpenId__MetadataAddress`
-     - `OpenId__Audience`
+   # Managed Identity names that will need access to the    GitHub App
+   azd env set RUNNER_MANAGED_IDENTITY_NAMES "mi-name-1,   mi-name-2,..."  # Comma-separated list of Managed    Identity names that will need access to the GitHub App.    Don't put spaces between names.
    
-   - For _generic JWT__:
-     - `JWT__TokenValidationParameters__IssuerSigningKeys`
-     - `JWT__TokenValidationParameters__ValidIssuer`
-     - `JWT__TokenValidationParameters__ValidAudience`
+   ```
 
-3. **General Configuration**
+   > *NOTE*: the following parameters are optional and have defaults. Refer to the [Token Server documentation](docs/token-server.md) for details: 
+   > `AZURE_APP_SERVICE_PLAN_SKU_NAME`, `REQUIRE_AUTHENTICATION`, `MAP_OPENAPI`
 
-   - `RequireAuthentication`: "true" or "false"
-   - `MapOpenApi`: "true" or "false"
+5. **Deploy to Azure**:
 
-### Using Azure Key Vault
+   ```bash
+   azd up
+   ```
 
-For secure management of sensitive configuration:
+   At completion, the CLI will output the URL of your deployed web app. Then run:
 
-1. Create an Azure Key Vault
-2. Store your GitHub private key as a secret
-3. Configure your App Service identity to access Key Vault
-4. Reference the key vault in your configuration:
+   ```bash
+   azd env get APP_REGISTRATION_APPLICATION_ID_URI
+   ```
 
-```json
-"Github": {
-  "ClientId": "your-app-id",
-  "PrivateKey": "@Microsoft.KeyVault(SecretUri=https://your-keyvault.vault.azure.net/secrets/github-private-key/)"
-}
+   to get the *Resource URI_ to be used in the Managed Identity token requests.
+
+   This command will create all the necessary resources in Azure, including a Resource Group, App Service Plan, Web App, Key Vault, and Entra ID Application. It will also configure the Web App to use a Managed Identity and set up access policies in Key Vault.  
+   It will also create and App Registration in Entra ID tenant and configure the Web App authentication to use it.  
+
+### Updates after first deployment
+
+If you need to make changes to the application or infrastructure [in particular if new Managed Identities need to be onboarded], simply modify the code or Bicep files and re-run `azd up`. The CLI will detect changes and apply them accordingly.
+
+## Use of the Service
+
+The typical use of this service is to call the `/installations/{org}/token` endpoint to get an installation access token for a specific organization. This token can then be used to authenticate API requests to GitHub on behalf of the installation or as Git password (use `x-access-token` as username) to clone git repositories belonging to the specified Github organization.  
+The access token to pass to the `/installations/{org}/token` will be typically retrieved using Managed Identity endpoints (see section below).
+
+### In an Azure VM or App Service
+
+```bash
+RESOURCE="[APP_REGISTRATION_APPLICATION_ID_URI]" # Get this value using `azd env get APP_REGISTRATION_APPLICATION_ID_URI`
+TOKEN=$(curl "http://169.254.169.254/metadata/identity/oauth2/token?api-version=2018-02-01&resource=$RESOURCE" -H Metadata:true | jq .access_token -r)
+GH_TOKEN=$(curl -H "Authorization: Bearer $TOKEN" "https://[your-app-name].azurewebsites.net/installations/[org]/token")
+
+git clone https://x-access-token:$GH_TOKEN@github.com/[org]/[repo].git
 ```
 
-## Cache Configuration
+More details on [Azure Documentation](https://learn.microsoft.com/en-us/entra/identity/managed-identities-azure-resources/how-managed-identities-work-vm).
 
-The service uses a distributed memory cache by default. To use Redis or another distributed cache, replace the registration in `Program.cs`:
+### In an Azure Arc connected machine
 
-```csharp
-// Default in-memory cache
-builder.Services.AddDistributedMemoryCache();
+```bash
+RESOURCE="[APP_REGISTRATION_APPLICATION_ID_URI]" # Get this value using `azd env get APP_REGISTRATION_APPLICATION_ID_URI`
+TOKEN_URL="http://localhost:40342/metadata/identity/oauth2/token?resource=${RESOURCE}&api-version=2020-06-01"
+AUTH_FILE=$(curl -s -D - -H "Metadata: True" $TOKEN_URL -o /dev/null | grep -i "Www-Authenticate: " | cut -f2 -d"=" | tr -d '\r')
+AUTH=$(cat $AUTH_FILE)
+TOKEN=$(curl -s -H "Authorization: Basic $AUTH" -H "Metadata: True" $TOKEN_URL | jq .access_token -r)
+GH_TOKEN=$(curl -H "Authorization: Bearer $TOKEN" "https://[your-app-name].azurewebsites.net/installations/[org]/token")
 
-// Redis cache example
-builder.Services.AddStackExchangeRedisCache(options =>
-{
-    options.Configuration = "your-redis-connection-string";
-    options.InstanceName = "GithubAppToken";
-});
+git clone https://x-access-token:$GH_TOKEN@github.com/[org]/[repo].git
+
 ```
 
-## Security Considerations
+The user running those commands must be part of the `himds` group on the Arc connected machine. To add a user to the `himds` group, run:
 
-- Store sensitive data like private keys securely using Key Vault or similar
-- In production, always enable authentication
-- Review GitHub App permissions to minimize access scope
+```bash
+sudo usermod -aG himds <your-username>
+```
 
-## License
-
-[MIT License](LICENSE)
+More details on [Azure Documentation](https://learn.microsoft.com/en-us/azure/azure-arc/servers/managed-identity-authentication).

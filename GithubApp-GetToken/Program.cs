@@ -4,17 +4,26 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.Identity.Web;
+using Microsoft.IdentityModel.Logging;
 using System.Reflection;
 
 const int INSTALLATION_CACHE_DURATION_HOURS = 1;
 
 var builder = WebApplication.CreateBuilder(args);
 
+builder.Logging.AddSimpleConsole(options =>
+{
+    options.IncludeScopes = true;
+    options.SingleLine = true;
+    options.TimestampFormat = "[hh:mm:ss.fff] ";
+});
+
 var authBuilder = builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme);
-    
+
 if (builder.Configuration["AzureAd:TenantId"] is not null)
-{ 
-    authBuilder.AddMicrosoftIdentityWebApi(builder.Configuration.GetSection("AzureAd"));
+{
+    authBuilder.AddMicrosoftIdentityWebApi(builder.Configuration.GetSection("AzureAd"),
+        subscribeToJwtBearerMiddlewareDiagnosticsEvents: true);
 }
 else if (builder.Configuration.GetSection("OpenId").GetChildren().Any())
 {
@@ -22,8 +31,7 @@ else if (builder.Configuration.GetSection("OpenId").GetChildren().Any())
 }
 else if (builder.Configuration.GetSection("JWT").GetChildren().Any())
 {
-    JwtBearerOptions opt = new();
-    authBuilder.AddJwtBearer(opt => builder.Configuration.Bind("OpenId", opt));
+    authBuilder.AddJwtBearer(opt => builder.Configuration.Bind("JWT", opt));
 }
 
 builder.Services.AddAuthorization();
@@ -67,8 +75,8 @@ app.MapGet("/version", () =>
 {
     return new
     {
-        pn = Assembly.GetEntryAssembly()!.GetCustomAttribute<AssemblyProductAttribute>()?.Product,
-        Application = Assembly.GetEntryAssembly()!.GetName().Name,
+        ProductName = Assembly.GetEntryAssembly()!.GetCustomAttribute<AssemblyProductAttribute>()?.Product,
+        AssemblyName = Assembly.GetEntryAssembly()!.GetName().Name,
         Assembly.GetEntryAssembly()!.GetCustomAttribute<AssemblyFileVersionAttribute>()?.Version,
         NETRuntime = Environment.Version.ToString(),
         OperatingSystem = Environment.OSVersion.VersionString
@@ -83,6 +91,14 @@ app.MapGet("/jwt", (GithubUtils gh) =>
     return Results.Content(gh.GetJWTToken(), "text/plain");
 })
 .WithName("GetGithubAppJwt")
+.WithOpenApi()
+.ConditionallyRequireAuthorization(authenticated);
+
+app.MapGet("/app", async (GithubClient cli) =>
+{
+    return Results.Ok(await cli.GetAppAsync());
+})
+.WithName("GetGithubAppInfo")
 .WithOpenApi()
 .ConditionallyRequireAuthorization(authenticated);
 
@@ -124,6 +140,12 @@ app.MapGet("/installations/{org}/token", static async (string org,
 .WithName("GetGithubInstallationToken")
 .WithOpenApi()
 .ConditionallyRequireAuthorization(authenticated);
+
+if (app.Configuration.GetValue("LogPII", false))
+{
+    IdentityModelEventSource.ShowPII = true;
+    IdentityModelEventSource.LogCompleteSecurityArtifact = true;
+}
 
 app.Run();
 

@@ -6,7 +6,7 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <UserSecretsId>aspnet-GithubApp_GetToken-3a27e461-5333-4ef2-8757-2f52a057916a</UserSecretsId>
     <RootNamespace>GithubApp_GetToken</RootNamespace>
-    <FileVersion>1.0.2508.2501</FileVersion>
+    <FileVersion>1.0.2508.2602</FileVersion>
   </PropertyGroup>
 
   <ItemGroup>
