@@ -38,15 +38,14 @@ param requireAuthentication bool = true
 param mapOpenApi bool = false
 
 var validAudiencesArray = empty(validAudiences) ? [] : split(validAudiences, ',')
-var delta = first(validAudiencesArray) == '00000000-0000-0000-0000-000000000000' ? 0 : 1
 var extraAudiences = [for (audience, i) in validAudiencesArray: {
-  name: 'AzureAd__TokenValidationParameters__ValidAudiences__${i + delta}'
+  name: 'AzureAd__TokenValidationParameters__ValidAudiences__${i + 1}'
   value: audience
 }]
-var clientIdAudience = delta == 1 ? [{
+var clientIdAudience = [{
   name: 'AzureAd__TokenValidationParameters__ValidAudiences__0'
   value: entraClientId
-}] : []
+}]
 
 resource webApp 'Microsoft.Web/sites@2022-03-01' = {
   name: name

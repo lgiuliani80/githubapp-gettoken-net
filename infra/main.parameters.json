@@ -29,14 +29,8 @@
     "entraTenantId": {
       "value": "${AZURE_TENANT_ID}"
     },
-    "entraClientId": {
-      "value": "${ENTRA_CLIENT_ID=}"
-    },
     "entraDomain": {
       "value": "${ENTRA_DOMAIN=}"
-    },
-    "validAudiences": {
-      "value": "${ENTRA_VALID_AUDIENCES=}"
     },
     "requireAuthentication": {
       "value": "${REQUIRE_AUTHENTICATION=true}"

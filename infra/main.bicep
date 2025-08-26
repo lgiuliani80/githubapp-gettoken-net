@@ -31,12 +31,6 @@ param githubPrivateKeySecretName string = 'github-private-key'
 @description('Entra ID tenant ID')
 param entraTenantId string = subscription().tenantId
 
-@description('Entra ID application client ID')
-param entraClientId string
-
-@description('Valid audincese for the tokens')
-param validAudiences string = ''
-
 @description('Entra ID domain')
 param entraDomain string = subscription().tenantId
 
@@ -52,12 +46,10 @@ param runnerManagedIdentityNames string = ''
 @description('Managed Identity oids to assign GithubRunner role (comma separated)')
 param runnerManagedIdentityIds string = ''
 
-
 var tags = {
   'azd-env-name': environmentName
 }
 
-var effectiveClientId = empty(entraClientId) ? '00000000-0000-0000-0000-000000000000' : entraClientId
 var effectiveDomain = empty(entraDomain) ? '${subscription().tenantId}.onmicrosoft.com' : entraDomain
 
 resource rg 'Microsoft.Resources/resourceGroups@2021-04-01' = {
@@ -81,9 +73,9 @@ module appModule 'modules/app.bicep' = {
     githubPrivateKey: loadTextContent('../.azure/github-private-key.pem')
     githubPrivateKeySecretName: githubPrivateKeySecretName
     entraTenantId: entraTenantId
-    entraClientId: effectiveClientId
+    entraClientId: githubAppRegistration.outputs.appId
     entraDomain: effectiveDomain
-    validAudiences: validAudiences
+    validAudiences: githubAppRegistration.outputs.audience
     requireAuthentication: requireAuthentication
     mapOpenApi: mapOpenApi
   }

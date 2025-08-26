@@ -56,3 +56,5 @@ resource miToSp 'Microsoft.Graph/appRoleAssignedTo@v1.0' = [for (name, index) in
 }]
 
 output applicationIdUri string = empty(githubApp.identifierUris) ? githubApp.appId : githubApp.identifierUris[0]
+output audience string = empty(githubApp.identifierUris) ? '' : githubApp.identifierUris[0]
+output appId string = githubApp.appId

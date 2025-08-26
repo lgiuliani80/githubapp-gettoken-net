@@ -6,6 +6,14 @@ hooks:
   preprovision:
     shell: pwsh
     run: |
+      $ErrorActionPreference = "Stop"
+
+      # Checking prerequisites
+      $tid = az account show --query tenantId -o tsv
+      if ($LASTEXITCODE -ne 0 -or -not $tid) {
+          throw "Az CLI not found or not logged on!"
+      }
+
       # Copying the GitHub App private key to the .azure folder so that it can be uploaded to Key Vault
       Copy-Item -Path $env:GITHUB_PRIVATE_KEY_FILE -Destination ".azure\$env:AZURE_ENV_NAME\github-private-key.pem"
       
@@ -20,20 +28,29 @@ hooks:
       }
       azd env set RUNNER_MANAGED_IDENTITY_IDS=$($ids -join ',') --environment $Env:AZURE_ENV_NAME
 
-      # Retrieve the Tenant Id from the Entra domain
+      # Check validity of Entra ID domain
       if ($Env:ENTRA_DOMAIN) {
         $tokenUri = New-Object Uri (Invoke-RestMethod -Uri "https://login.microsoftonline.com/$($Env:ENTRA_DOMAIN)/v2.0/.well-known/openid-configuration" | Select-Object -ExpandProperty 'token_endpoint')
         $tenantId = $tokenUri.Segments[1].TrimEnd('/')
         if (-not $tenantId -or $LASTEXITCODE -ne 0) {
             throw "Unable to find tenant for domain '$Env:ENTRA_DOMAIN'!"
         }
-        if ($Env:AZURE_TENANT_ID -and $Env:AZURE_TENANT_ID -ne $tenantId) {
-            throw "The provided domain '$Env:ENTRA_DOMAIN' does not belong to deployment tenant id $Env:AZURE_TENANT_ID !"
+        if ($tenantId -ne $tid) {
+            throw "The domain '$Env:ENTRA_DOMAIN' does not belong to the current tenant '$tid'!"
         }
       }
 
       # Completed
       Write-Host "Pre-provisioning steps completed." -ForegroundColor Green
+
+  postup:
+    shell: pwsh
+    run: |
+      $ErrorActionPreference = "Stop"
+
+      Write-Host "Use Managed Identities $Env:RUNNER_MANAGED_IDENTITY_NAMES " -ForegroundColor Green
+      Write-Host "to obtain tokens for resource $Env:APP_REGISTRATION_APPLICATION_ID_URI." -ForegroundColor Green
+      Write-Host "Then invoke $Env:WEB_URI/installations/<org-name>/token to get the Github Token." -ForegroundColor Green
 
 # Required services
 services:
