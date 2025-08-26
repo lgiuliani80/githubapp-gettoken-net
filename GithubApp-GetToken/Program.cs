@@ -11,9 +11,14 @@ const int INSTALLATION_CACHE_DURATION_HOURS = 1;
 
 var builder = WebApplication.CreateBuilder(args);
 
-var authBuilder = builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme);
+builder.Logging.AddSimpleConsole(options =>
+{
+    options.IncludeScopes = true;
+    options.SingleLine = true;
+    options.TimestampFormat = "[hh:mm:ss.fff] ";
+});
 
-IdentityModelEventSource.ShowPII = true;
+var authBuilder = builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme);
 
 if (builder.Configuration["AzureAd:TenantId"] is not null)
 {
@@ -127,6 +132,12 @@ app.MapGet("/installations/{org}/token", static async (string org,
 .WithName("GetGithubInstallationToken")
 .WithOpenApi()
 .ConditionallyRequireAuthorization(authenticated);
+
+if (app.Configuration.GetValue("LogPII", false))
+{
+    IdentityModelEventSource.ShowPII = true;
+    IdentityModelEventSource.LogCompleteSecurityArtifact = true;
+}
 
 app.Run();
 
