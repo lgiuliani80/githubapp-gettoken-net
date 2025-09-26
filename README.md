@@ -99,7 +99,8 @@ All endpoints can be protected with authentication (JWT Bearer) which can be tog
 
    to get the *Resource URI_ to be used in the Managed Identity token requests.
 
-   This command will create all the necessary resources in Azure, including a Resource Group, App Service Plan, Web App, Key Vault, _and Entra ID Application_. It will also configure the Web App to use a Managed Identity and set up access policies in Key Vault.  
+   This command will create all the necessary resources in Azure, including a Resource Group, App Service Plan, Web App, Key Vault, _and Entra ID Application_. It will also configure the Web App to use a Managed Identity and set up access policies in Key Vault.
+    
    The App Registration in Entra ID will be created with name `Github-{GITHUB_APP_NAME}` and Application ID Uri `api://{ENTRA_DOMAIN}/GithubApp/{GITHUB_APP_NAME}`.
 
 ### Updates after first deployment
