@@ -22,7 +22,7 @@ All endpoints can be protected with authentication (JWT Bearer) which can be tog
 |----------|--------|-------------|----------|
 | `/healthz` | GET | Health check endpoint | 200 OK if healthy |
 | `/version` | GET | Returns version information | JSON with version details |
-| `/jwt` | GET | Returns a JWT token for GitHub API authentication | Text/plain JWT token |
+| `/jwt` | GET | Returns a JWT token for GitHub API authentication. Tokens last 1h. | Text/plain JWT token |
 | `/app` | GET | Retrieves information about the current Github App | JSON |
 | `/installations` | GET | Lists all GitHub App installations | JSON array of installations |
 | `/installations/{org}/token` | GET | Gets an access token for an installation by org name or ID | Text/plain access token |
