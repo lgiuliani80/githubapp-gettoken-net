@@ -75,10 +75,10 @@ All endpoints can be protected with authentication (JWT Bearer) which can be tog
    azd env set GITHUB_PRIVATE_KEY_FILE "/path/to/your-github-app-private-key.pem"
    
    # Entra ID/authentication configuration
-   azd env set ENTRA_DOMAIN "your-domain.com"   # The domain    of your Entra ID tenant
+   azd env set ENTRA_DOMAIN "your-domain.com"   # The domain of your Entra ID tenant
    
-   # Managed Identity names that will need access to the    GitHub App
-   azd env set RUNNER_MANAGED_IDENTITY_NAMES "mi-name-1,   mi-name-2,..."  # Comma-separated list of Managed    Identity names that will need access to the GitHub App.    Don't put spaces between names.
+   # Managed Identity names that will need access to the GitHub App
+   azd env set RUNNER_MANAGED_IDENTITY_NAMES "mi-name-1,mi-name-2,..."  # Comma-separated list of Managed Identity names that will need access to the GitHub App. Don't put spaces between names.
    
    ```
 
@@ -99,8 +99,8 @@ All endpoints can be protected with authentication (JWT Bearer) which can be tog
 
    to get the *Resource URI_ to be used in the Managed Identity token requests.
 
-   This command will create all the necessary resources in Azure, including a Resource Group, App Service Plan, Web App, Key Vault, and Entra ID Application. It will also configure the Web App to use a Managed Identity and set up access policies in Key Vault.  
-   It will also create and App Registration in Entra ID tenant and configure the Web App authentication to use it.  
+   This command will create all the necessary resources in Azure, including a Resource Group, App Service Plan, Web App, Key Vault, _and Entra ID Application_. It will also configure the Web App to use a Managed Identity and set up access policies in Key Vault.  
+   The App Registration in Entra ID will be created with name `Github-{GITHUB_APP_NAME}` and Application ID Uri `api://{ENTRA_DOMAIN}/GithubApp/{GITHUB_APP_NAME}`.
 
 ### Updates after first deployment
 
