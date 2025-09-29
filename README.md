@@ -36,7 +36,7 @@ All endpoints can be protected with authentication (JWT Bearer) which can be tog
 3. Powershell 7 installed on [Windows](https://learn.microsoft.com/en-us/powershell/scripting/install/installing-powershell-on-windows?view=powershell-7.5) or Linux [Linux](https://learn.microsoft.com/en-us/powershell/scripting/install/installing-powershell-core-on-linux?view=powershell-7.5) or MacOS [MacOS](https://learn.microsoft.com/en-us/powershell/scripting/install/installing-powershell-core-on-macos?view=powershell-7.5).
 4. An Azure subscription to deploy resources into.
 5. The executing user or service principal must have permissions Owner permissions on the subscription and must be Global Administrator or Application Administrator in the Entra ID tenant.
-6. GitHub App created with private key downloaded
+6. GitHub App created with private key downloaded and installed in your Github organization(s)
 7. The list of Managed Identity names that will need access to the GitHub App, for example System Assigned identities of Azure VMs or App Services that will call this service or ARC server names.
 
 ### Deployment Steps
