@@ -27,6 +27,64 @@ All endpoints can be protected with authentication (JWT Bearer) which can be tog
 | `/installations` | GET | Lists all GitHub App installations | JSON array of installations |
 | `/installations/{org}/token` | GET | Gets an access token for an installation by org name or ID | Text/plain access token |
 
+
+## Deploy on-premises on Windows as a Windows Service
+
+Open a PowerShell prompt with Administrator privileges and run the following commands:
+
+1. Publish the project to a folder:
+   ```powershell
+   dotnet publish .\GithubApp-GetToken\GithubApp-GetToken.csproj `
+     -c Release -r win-x64 --self-contained true `
+     -o C:\Services\GithubApp-GetToken
+   ```
+
+3. Create a Windows Service using PowerShell:
+   ```powershell
+   $githubClientId = "<githubapp-clientid>"
+   $serviceName = "GithubApp-GetToken"
+   $serviceDisplayName = "GitHub App Token Server"
+   $listeningUrl = "http://localhost:5550"
+   $principal = "NT AUTHORITY\SERVIZIO DI RETE"   # Or "NT AUTHORITY\NetworkService" if Windows is in English
+   $privateKeyFile = "privkey.pem"
+
+   # Grant read access to the private key file for the service principal
+   icacls $privateKeyFile /grant "${principal}:(R)"
+
+   $binPath = """$(Resolve-Path .\GithubApp-GetToken.exe)"" "
+   $binPath += "--urls $listeningUrl "
+   $binPath += "--RequireAuthentication false "
+   $binPath += "--Github:ClientId=$githubClientId "
+   $binPath += "--Github:PrivateKey=$(Resolve-Path $privateKeyFile)"
+
+   # Create the Windows Service
+   sc.exe create $serviceName binpath= $binPath obj= $principal DisplayName= $serviceDisplayName start= auto
+   
+   # Configure the service to restart on failure and set dependencies
+   sc.exe failure $serviceName reset= 0 actions= 'restart/60000/restart/60000/run/1000'
+   sc.exe config $serviceName depend= Tcpip
+
+   # Create the Event Log source for the service
+   [void] ([Diagnostics.EventLog]::SourceExists($serviceName) -or [Diagnostics.EventLog]::CreateEventSource($serviceName, "Application"))
+
+   # Start the service
+   net start $serviceName
+
+   # Test the service endpoints
+   
+   # Get service version
+   irm $listeningUrl/version
+   
+   # Get service health
+   irm $listeningUrl/healthz
+   
+   # Retrieve information about the GitHub App
+   irm $listeningUrl/app
+   
+   # List all the installations of the GitHub App
+   irm $listeningUrl/installations
+   ```
+
 ## Easy Deployment on Azure with Azure Developer CLI (azd)
 
 ### Prerequisites

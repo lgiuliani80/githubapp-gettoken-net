@@ -6,6 +6,8 @@ using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.Identity.Web;
 using Microsoft.IdentityModel.Logging;
 using System.Reflection;
+using System.Runtime.InteropServices;
+using System.Runtime.Versioning;
 
 const int INSTALLATION_CACHE_DURATION_HOURS = 1;
 
@@ -17,6 +19,24 @@ builder.Logging.AddSimpleConsole(options =>
     options.SingleLine = true;
     options.TimestampFormat = "[hh:mm:ss.fff] ";
 });
+
+if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+{
+    var serviceName = builder.Configuration.GetValue<string>("ServiceName") ?? "GithubApp-GetToken";
+
+    builder.Services.AddWindowsService(options =>
+    {
+        options.ServiceName = serviceName;
+    });
+
+    builder.Logging.AddEventLog(settings =>
+    {
+        #pragma warning disable CA1416
+        settings.LogName = "Application";
+        settings.SourceName = serviceName;
+        #pragma warning restore CA1416
+    });
+}
 
 var authBuilder = builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme);
 
@@ -83,15 +103,13 @@ app.MapGet("/version", () =>
     };
 
 })
-.WithName("GetVersion")
-.WithOpenApi();
+.WithName("GetVersion");
 
 app.MapGet("/jwt", (GithubUtils gh) =>
 {
     return Results.Content(gh.GetJWTToken(), "text/plain");
 })
 .WithName("GetGithubAppJwt")
-.WithOpenApi()
 .ConditionallyRequireAuthorization(authenticated);
 
 app.MapGet("/app", async (GithubClient cli) =>
@@ -99,7 +117,6 @@ app.MapGet("/app", async (GithubClient cli) =>
     return Results.Ok(await cli.GetAppAsync());
 })
 .WithName("GetGithubAppInfo")
-.WithOpenApi()
 .ConditionallyRequireAuthorization(authenticated);
 
 app.MapGet("/installations", async (GithubClient cli) =>
@@ -107,7 +124,6 @@ app.MapGet("/installations", async (GithubClient cli) =>
     return Results.Ok(await cli.GetAppInstallationsAsync());
 })
 .WithName("GetGithubAppInstallations")
-.WithOpenApi()
 .ConditionallyRequireAuthorization(authenticated);
 
 app.MapGet("/installations/{org}/token", static async (string org,
@@ -138,7 +154,6 @@ app.MapGet("/installations/{org}/token", static async (string org,
     return Results.Content(await ghcli.GetAccessTokenForInstallation(installationId), "text/plain");
 })
 .WithName("GetGithubInstallationToken")
-.WithOpenApi()
 .ConditionallyRequireAuthorization(authenticated);
 
 if (app.Configuration.GetValue("LogPII", false))
