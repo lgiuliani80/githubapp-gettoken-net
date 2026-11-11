@@ -211,6 +211,12 @@ For secure management of sensitive configuration:
 }
 ```
 
+## GitHub HTTP resilience
+
+The GitHub HTTP client uses the .NET standard resilience handler, including retries with exponential backoff and jitter for transient failures (HTTP 408, 429, and 5xx responses, network errors, and timeouts). HTTP 401 responses are also retried, and the GitHub App JWT is generated again for each attempt. A persistent authentication error is returned after the standard retry limit. The standard pipeline also applies rate limiting, a circuit breaker, and request timeouts. Retry delays can honor the `Retry-After` header and are subject to the pipeline's total timeout.
+
+Retries for unsafe HTTP methods are limited to HTTP 401 responses. In particular, creating an installation access token uses POST and is not retried for network errors or other transient failures, because those failures do not guarantee that GitHub did not create a token.
+
 ## Cache Configuration
 
 The service uses a distributed memory cache by default. To use Redis or another distributed cache, replace the registration in `Program.cs`:

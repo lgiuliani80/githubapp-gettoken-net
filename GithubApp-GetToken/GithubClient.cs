@@ -1,4 +1,6 @@
 ﻿using GithubApp_GetToken.Model;
+using Microsoft.Extensions.Http.Resilience;
+using System.Net;
 using System.Net.Http.Headers;
 using System.Reflection;
 using System.Web;
@@ -53,14 +55,22 @@ public static class GithubClientExtensions
     {
         services.AddTransient<GithubAppBearerTokenHandler>();
 
-        services.AddHttpClient<GithubClient>(htcli =>
+        var clientBuilder = services.AddHttpClient<GithubClient>(htcli =>
         {
             htcli.BaseAddress = new Uri("https://api.github.com");
             htcli.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/vnd.github+json"));
             htcli.DefaultRequestHeaders.UserAgent.Add(new ProductInfoHeaderValue(GithubClient.CLIENT_NAME, GithubClient.CLIENT_VERSION));
             htcli.DefaultRequestHeaders.Add("X-GitHub-Api-Version", "2022-11-28");
 
-        }).AddHttpMessageHandler<GithubAppBearerTokenHandler>();
+        });
+        clientBuilder.AddStandardResilienceHandler(options =>
+        {
+            options.Retry.DisableForUnsafeHttpMethods();
+            var shouldHandle = options.Retry.ShouldHandle;
+            options.Retry.ShouldHandle = async args =>
+                args.Outcome.Result?.StatusCode == HttpStatusCode.Unauthorized || await shouldHandle(args);
+        });
+        clientBuilder.AddHttpMessageHandler<GithubAppBearerTokenHandler>();
 
         return services;
     }
