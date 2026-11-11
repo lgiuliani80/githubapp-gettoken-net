@@ -45,7 +45,8 @@ Open a PowerShell prompt with Administrator privileges and run the following com
    $serviceName = "GithubApp-GetToken"
    $serviceDisplayName = "GitHub App Token Server"
    $listeningUrl = "http://localhost:5550"
-   $principal = "NT AUTHORITY\SERVIZIO DI RETE"   # Or "NT AUTHORITY\NetworkService" if Windows is in English
+   $networkServiceSid = [System.Security.Principal.SecurityIdentifier]::new("S-1-5-20") # Network Service SID
+   $principal = $networkServiceSid.Translate([System.Security.Principal.NTAccount]).Value
    $privateKeyFile = "privkey.pem"
 
    # Grant read access to the private key file for the service principal
