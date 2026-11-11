@@ -52,8 +52,8 @@ Open a PowerShell prompt with Administrator privileges and run the following com
    icacls $privateKeyFile /grant "${principal}:(R)"
 
    $binPath = """$(Resolve-Path .\GithubApp-GetToken.exe)"" "
-   $binPath += "--urls $listeningUrl "
-   $binPath += "--RequireAuthentication false "
+   $binPath += "--urls=$listeningUrl "
+   $binPath += "--RequireAuthentication=false "
    $binPath += "--Github:ClientId=$githubClientId "
    $binPath += "--Github:PrivateKey=$(Resolve-Path $privateKeyFile)"
 
